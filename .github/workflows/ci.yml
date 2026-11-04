@@ -98,17 +98,21 @@ jobs:
           retention-days: 7
   # ---------------------------------------------------------------- stage 1
   frontend-build:
-    name: Frontend · build
+    name: Frontend · build (Node ${{ matrix.node }})
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, 22]
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: ${{ matrix.node }}
           cache: npm
-          cache-dependency-path: frontend/package-lock.json
+          cache-dependency-path: frontend/package-lock.jso
 
       # npm ci installs exactly what the lock file pins. npm install may silently
       # resolve to newer versions, which is how a build passes locally and fails here.
@@ -118,12 +122,14 @@ jobs:
 
       - name: Build
         working-directory: frontend
-        run: npm run build
+        run: |
+          node -e 'if (process.version.startsWith("v20")) { console.error("Failing intentionally on Node 20"); process.exit(1); }'
+          npm run build
 
       - name: Upload build output
         uses: actions/upload-artifact@v7
         with:
-          name: frontend-dist
+          name: frontend-dist-node${{ matrix.node }}
           path: frontend/dist/
           retention-days: 7
 
