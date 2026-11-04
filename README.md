@@ -310,3 +310,6 @@ BDD scenarios are documented in separate files:
 
 - [API testing scenarios (BDD)](docs/api-testing-scenarios-bdd.md)
 - [Frontend user scenarios (BDD)](docs/frontend-user-scenarios-bdd.md)
+
+test comment
+

@@ -71,16 +71,48 @@ jobs:
           retention-days: 7
 
   # ---------------------------------------------------------------- stage 1
+  integration-test:
+    name: Backend · integration tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [backend-test]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v6
+        with:
+          java-version: '21'
+          distribution: temurin
+          cache: maven
+
+      - name: Run integration tests
+        working-directory: backend
+        run: mvn -B test -Dtest='*IntegrationTest,*E2ETest'
+
+      - name: Publish test report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: backend-integration-surefire-reports
+          path: backend/target/surefire-reports/
+          retention-days: 7
+
+  # ---------------------------------------------------------------- stage 1
   frontend-build:
-    name: Frontend · build
+    name: Frontend · build (Node ${{ matrix.node }})
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, 22]
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: ${{ matrix.node }}
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
@@ -97,7 +129,7 @@ jobs:
       - name: Upload build output
         uses: actions/upload-artifact@v7
         with:
-          name: frontend-dist
+          name: frontend-dist-node${{ matrix.node }}
           path: frontend/dist/
           retention-days: 7
 
@@ -106,7 +138,7 @@ jobs:
   # spending minutes building images for code whose tests already failed.
   package:
     name: Package · container images
-    needs: [frontend-lint, backend-test, frontend-build]
+    needs: [frontend-lint, backend-test, frontend-build, integration-test]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
@@ -136,7 +168,7 @@ jobs:
   ci-status:
     name: CI status
     if: always()
-    needs: [frontend-lint, backend-test, frontend-build, package]
+    needs: [frontend-lint, backend-test, frontend-build, integration-test, package]
     runs-on: ubuntu-latest
     steps:
       - name: Fail if any stage failed
