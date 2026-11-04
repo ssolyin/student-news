@@ -25,6 +25,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      - name: Force failure for Task 4.1
+        run: exit 1
+        
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
