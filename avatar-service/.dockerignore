@@ -1,0 +1,21 @@
+# Build output: the JAR is rebuilt inside the image
+target/
+
+# Local uploads from running the service without Docker
+data/
+
+# IDE and editor files
+.idea/
+.vscode/
+*.iml
+
+# Logs
+logs/
+*.log
+
+# Not needed to build the image
+.git
+Dockerfile
+.dockerignore
+README.md
+smoke-test.sh
