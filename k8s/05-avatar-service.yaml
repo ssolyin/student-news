@@ -1,0 +1,62 @@
+# avatar-service (Spring Boot picture store): the pod (Deployment) and a stable
+# name in front of it (Service).
+#
+# There is no ConfigMap, volume or probe here yet. The image sets PORT and
+# UPLOAD_DIR itself (avatar-service/Dockerfile), and the pictures live in the
+# container's own filesystem, so they are lost when the pod is replaced.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: avatar-service
+  namespace: student-news
+  labels:
+    app: avatar-service
+spec:
+  # One pod only. Each pod stores the pictures in its own filesystem, so with
+  # two pods a picture uploaded to one would be a 404 on the other.
+  replicas: 1
+  # The Deployment manages the pods with this label. It must match the labels
+  # in the pod template below.
+  selector:
+    matchLabels:
+      app: avatar-service
+  template:
+    metadata:
+      labels:
+        app: avatar-service
+    spec:
+      containers:
+        - name: avatar-service
+          # Explicit version and a local image, as for the backend: built with
+          # docker, copied in with `minikube image load`.
+          image: avatar-service:1.0
+          # Use the image already on the node; pull only when it is missing.
+          imagePullPolicy: IfNotPresent
+          ports:
+            # PORT=8090 in avatar-service/Dockerfile.
+            - containerPort: 8090
+          # The image already runs as the `app` user (USER 10001:10001 in
+          # avatar-service/Dockerfile). Stating it here makes Kubernetes
+          # enforce it.
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            allowPrivilegeEscalation: false
+---
+# One stable name, `avatar-service`, in front of the pod, whatever IP address
+# the pod has at the moment.
+apiVersion: v1
+kind: Service
+metadata:
+  name: avatar-service
+  namespace: student-news
+spec:
+  # ClusterIP (the default type): reachable only from inside the cluster.
+  type: ClusterIP
+  # Traffic goes to every Ready pod carrying this label.
+  selector:
+    app: avatar-service
+  ports:
+    - port: 8090         # port of the Service
+      targetPort: 8090   # port of the container
